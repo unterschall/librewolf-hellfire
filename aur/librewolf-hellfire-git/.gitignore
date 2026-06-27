@@ -1,0 +1,9 @@
+# makepkg build artifacts — keep the AUR repo clean
+src/
+pkg/
+*.pkg.tar.*
+*.tar.gz
+*.tar.xz
+*.source.tar.xz
+*.asc
+librewolf-hellfire-git/

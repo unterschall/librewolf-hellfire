@@ -1,0 +1,15 @@
+# IDE / editor / tooling
+.idea/
+.vscode/
+.claude/
+
+# JVM crash dumps and misc logs
+hs_err_pid*.log
+*.log
+
+# makepkg build artifacts (also ignored per-package)
+**/src/
+**/pkg/
+*.pkg.tar.*
+*.tar.gz
+*.tar.xz
