@@ -1,0 +1,81 @@
+name: CI (smoke test)
+
+# Fast validation that runs on every push / PR. Confirms the packaging and the
+# build pipeline's logic without doing the multi-hour Firefox compile (that lives
+# in build.yml and only runs on dispatch/schedule).
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  UPSTREAM_REPO: https://codeberg.org/FailsafeDX/librewolf-hellfire.git
+  PORTABLE_MARCH: "-march=x86-64-v3 -mtune=generic"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shell syntax (PKGBUILDs + scripts)
+        run: |
+          rc=0
+          for f in aur/*/PKGBUILD scripts/*.sh; do
+            if bash -n "$f"; then echo "ok:  $f"; else echo "BAD: $f"; rc=1; fi
+          done
+          exit $rc
+
+      - name: Workflow YAML parses
+        run: |
+          python3 - <<'PY'
+          import glob, yaml
+          for f in glob.glob('.github/workflows/*.yml'):
+              yaml.safe_load(open(f)); print("ok:", f)
+          PY
+
+      - name: Version/tag derivation + portable -march rewrite
+        run: |
+          set -euo pipefail
+          git clone --depth 1 "$UPSTREAM_REPO" lwhf
+          cd lwhf
+          ver=$(cat version); rel=$(cat release); tag="${ver}-${rel}"
+          echo "Detected upstream: version=$ver release=$rel tag=$tag"
+          [ -n "$ver" ] && [ -n "$rel" ] || { echo "::error::version/release empty"; exit 1; }
+
+          # AUR pkgver encodes the tag with '_'; verify it round-trips back.
+          pkgver="${ver}_${rel}"
+          [ "${pkgver/_/-}" = "$tag" ] || { echo "::error::tag round-trip mismatch"; exit 1; }
+
+          # Reproduce the rewrite the build job performs and assert it took effect.
+          # If upstream renames the flag, this fails loudly instead of silently
+          # shipping a non-portable -march=native binary.
+          sed -i "s/-march=native -mtune=native/${PORTABLE_MARCH}/g" assets/mozconfig
+          grep -q 'x86-64-v3' assets/mozconfig || { echo "::error::portable -march not applied"; exit 1; }
+          if grep -q 'march=native' assets/mozconfig; then
+            echo "::error::residual -march=native after rewrite"; grep -n march assets/mozconfig; exit 1
+          fi
+          echo "smoke checks passed"
+
+  srcinfo:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install tooling
+        run: pacman -Sy --noconfirm --needed base-devel git pacman-contrib
+      - uses: actions/checkout@v4
+      - name: PKGBUILDs parse under makepkg
+        run: |
+          set -euo pipefail
+          useradd -m builder
+          chown -R builder:builder .
+          for d in aur/librewolf-hellfire-git aur/librewolf-hellfire-bin; do
+            echo "== $d =="
+            out=$(sudo -u builder bash -c "cd '$d' && makepkg --printsrcinfo")
+            echo "$out" | grep -q '^pkgbase = ' || { echo "::error::printsrcinfo failed for $d"; exit 1; }
+            echo "$out" | sed -n '1,6p'
+          done
+          echo "PKGBUILDs parse cleanly"

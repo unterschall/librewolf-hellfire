@@ -21,7 +21,8 @@ Release on this same repo, which the `-bin` package then downloads.
 | --- | --- |
 | [`aur/librewolf-hellfire-git/`](aur/librewolf-hellfire-git) | **AUR source package (VCS).** Tracks the integration repo's `main` branch and compiles locally. HellFire's `-march=native` ⇒ a binary tuned to *your* CPU. |
 | [`aur/librewolf-hellfire-bin/`](aur/librewolf-hellfire-bin) | **AUR prebuilt package.** Installs a portable binary downloaded from this repo's GitHub Releases. |
-| [`.github/workflows/build.yml`](.github/workflows/build.yml) | **CI.** Builds the portable binary (`-march=x86-64-v3`) and publishes it as a GitHub Release for the `-bin` package; optionally pushes the `-bin` update to the AUR. |
+| [`.github/workflows/build.yml`](.github/workflows/build.yml) | **CI build.** Builds the portable binary (`-march=x86-64-v3`) and publishes it as a GitHub Release for the `-bin` package; optionally pushes the `-bin` update to the AUR. Runs on manual dispatch / weekly cron only. |
+| [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | **CI smoke test.** Fast checks on every push/PR (shell + YAML syntax, version/tag derivation, the portable `-march` rewrite, and `makepkg --printsrcinfo`). No full build. |
 | [`scripts/bump-version.sh`](scripts/bump-version.sh) | Bump the `-bin` package to a new upstream tag (refreshes checksums + `.SRCINFO`). |
 | [`scripts/update-aur-bin.sh`](scripts/update-aur-bin.sh) | Used by CI to push the updated `-bin` package to the AUR. |
 
@@ -68,7 +69,8 @@ The workflow (`.github/workflows/build.yml`):
    release tagged `<tag>`.
 6. *(optional)* Bumps and pushes `librewolf-hellfire-bin` to the AUR.
 
-Triggers: weekly cron, manual dispatch, and pushes that touch the workflow.
+Triggers: weekly cron and manual dispatch only. A plain push never starts the
+heavy build — it runs the smoke test (`ci.yml`) instead.
 
 ### Runner requirements ⚠️
 

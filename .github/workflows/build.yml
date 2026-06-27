@@ -10,6 +10,9 @@ name: Build & release LibreWolf HellFire
 # the 6 h job limit. For reliable runs use a larger or self-hosted runner and
 # adjust `runs-on`.
 
+# Triggered manually or on a weekly schedule only — never on plain pushes, so a
+# routine commit doesn't kick off a multi-hour build. Fast validation lives in
+# ci.yml.
 on:
   workflow_dispatch:
     inputs:
@@ -19,9 +22,6 @@ on:
         default: false
   schedule:
     - cron: "0 6 * * 1" # Mondays 06:00 UTC — catch upstream version bumps
-  push:
-    branches: [main]
-    paths: [".github/workflows/build.yml"]
 
 permissions:
   contents: write # needed to create releases
