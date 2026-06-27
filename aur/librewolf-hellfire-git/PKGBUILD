@@ -78,6 +78,12 @@ prepare() {
   # The integration repo pulls LibreWolf's prefs/policies from a git submodule.
   git submodule update --init --depth 1
 
+  # librewolf-patches.py copies assets/mozconfig.new, which this fork does not
+  # ship; its assets/mozconfig is also wrapped in markdown ``` fences. Strip the
+  # fences to produce the mozconfig.new that `make dir` expects. (-march=native
+  # is left intact here — a local build tuned to this machine's CPU.)
+  grep -v '^```' assets/mozconfig > assets/mozconfig.new
+
   # Download the matching Firefox release (GPG-verified by the Makefile) and
   # apply the LibreWolf + HellFire patch stack -> ./librewolf-<ver>-<rel>/.
   make dir

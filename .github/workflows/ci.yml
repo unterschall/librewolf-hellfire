@@ -50,13 +50,16 @@ jobs:
           pkgver="${ver}_${rel}"
           [ "${pkgver/_/-}" = "$tag" ] || { echo "::error::tag round-trip mismatch"; exit 1; }
 
-          # Reproduce the rewrite the build job performs and assert it took effect.
-          # If upstream renames the flag, this fails loudly instead of silently
-          # shipping a non-portable -march=native binary.
-          sed -i "s/-march=native -mtune=native/${PORTABLE_MARCH}/g" assets/mozconfig
-          grep -q 'x86-64-v3' assets/mozconfig || { echo "::error::portable -march not applied"; exit 1; }
-          if grep -q 'march=native' assets/mozconfig; then
-            echo "::error::residual -march=native after rewrite"; grep -n march assets/mozconfig; exit 1
+          # Reproduce what the build job does: strip the markdown ``` fences from
+          # assets/mozconfig to produce mozconfig.new (which patches.py copies),
+          # then apply the portable -march. Fails loudly if upstream changes the
+          # mozconfig shape so we don't silently ship a broken/non-portable build.
+          grep -v '^```' assets/mozconfig > assets/mozconfig.new
+          if grep -q '^```' assets/mozconfig.new; then echo "::error::code fence leaked into mozconfig.new"; exit 1; fi
+          sed -i "s/-march=native -mtune=native/${PORTABLE_MARCH}/g" assets/mozconfig.new
+          grep -q 'x86-64-v3' assets/mozconfig.new || { echo "::error::portable -march not applied"; exit 1; }
+          if grep -q 'march=native' assets/mozconfig.new; then
+            echo "::error::residual -march=native after rewrite"; grep -n march assets/mozconfig.new; exit 1
           fi
           echo "smoke checks passed"
 

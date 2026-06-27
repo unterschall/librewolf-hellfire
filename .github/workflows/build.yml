@@ -80,12 +80,17 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Apply portable CPU baseline
+      - name: Generate mozconfig.new + apply portable CPU baseline
         if: steps.gate.outputs.skip == 'false'
         run: |
           cd lwhf
-          sed -i "s/-march=native -mtune=native/${PORTABLE_MARCH}/g" assets/mozconfig
-          grep -n "march" assets/mozconfig || true
+          # librewolf-patches.py copies assets/mozconfig.new, which this fork does
+          # not ship; its assets/mozconfig is also wrapped in markdown ``` fences.
+          # Strip the fences to produce the mozconfig.new the build expects.
+          grep -v '^```' assets/mozconfig > assets/mozconfig.new
+          # Portable baseline so the binary runs on any modern x86_64 CPU.
+          sed -i "s/-march=native -mtune=native/${PORTABLE_MARCH}/g" assets/mozconfig.new
+          grep -n "march" assets/mozconfig.new || true
 
       - name: Prepare source tree (fetch Firefox + apply patches)
         if: steps.gate.outputs.skip == 'false'
