@@ -57,7 +57,12 @@ sed -i -E "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
 updpkgsums
 makepkg --printsrcinfo >.SRCINFO
 
-git add -A
+# Stage only the packaging files — NOT `git add -A`. updpkgsums made makepkg
+# download the sources (the librewolf-hellfire-src VCS clone, the tarball, src/)
+# into this dir; committing those would push huge blobs the AUR rejects.
+git add PKGBUILD .SRCINFO
+[ -f "${PKG}.install" ] && git add "${PKG}.install"
+[ -f librewolf-hellfire.desktop ] && git add librewolf-hellfire.desktop
 if git diff --cached --quiet; then
   echo "No changes to push."
   exit 0

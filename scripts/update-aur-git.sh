@@ -62,7 +62,11 @@ cp -f "${WORK}/aur/${PKG}/librewolf-hellfire.desktop" librewolf-hellfire.desktop
 # placeholder pkgver from the PKGBUILD is emitted, which is expected for -git.)
 makepkg --printsrcinfo >.SRCINFO
 
-git add -A
+# Stage only the packaging files — never `git add -A`, so stray build artifacts
+# can't sneak into the AUR commit.
+git add PKGBUILD .SRCINFO
+[ -f "${PKG}.install" ] && git add "${PKG}.install"
+[ -f librewolf-hellfire.desktop ] && git add librewolf-hellfire.desktop
 if git diff --cached --quiet; then
   echo "No packaging changes to push."
   exit 0
