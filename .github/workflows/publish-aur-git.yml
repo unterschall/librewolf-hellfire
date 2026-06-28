@@ -1,0 +1,40 @@
+name: Publish AUR (librewolf-hellfire-git)
+
+# The -git package builds from the latest upstream git at install time, so it is
+# NOT tied to a release. Push it to the AUR only when its packaging actually
+# changes — never on a mere pkgver bump, which AUR policy forbids for VCS
+# packages. Hence this is decoupled from build.yml (which is release-driven and
+# handles -bin) and triggers on packaging changes instead.
+#
+# Gated on the AUR_SSH_PRIVATE_KEY secret; a no-op if that secret is unset.
+on:
+  push:
+    branches: [main]
+    paths:
+      - aur/librewolf-hellfire-git/**
+      - scripts/update-aur-git.sh
+      - .github/workflows/publish-aur-git.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish-aur-git:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Gate on AUR secret
+        id: haskey
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          if [ -n "$AUR_SSH_PRIVATE_KEY" ]; then echo "have=true" >> "$GITHUB_OUTPUT"
+          else echo "have=false (set AUR_SSH_PRIVATE_KEY to enable)"; echo "have=false" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/checkout@v4
+        if: steps.haskey.outputs.have == 'true'
+      - name: Update and push AUR package
+        if: steps.haskey.outputs.have == 'true'
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: ./scripts/update-aur-git.sh
