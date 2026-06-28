@@ -7,3 +7,4 @@ pkg/
 *.source.tar.xz
 *.asc
 librewolf-hellfire/
+librewolf-hellfire-src/

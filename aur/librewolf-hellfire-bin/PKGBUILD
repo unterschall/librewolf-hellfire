@@ -50,7 +50,7 @@ source=(
   # Prebuilt package tarball from the CI GitHub Release. Top-level dir is `librewolf/`.
   "librewolf-hellfire-${_tag}-linux-x86_64.tar.xz::https://github.com/${_ghrepo}/releases/download/${_tag}/librewolf-hellfire-${_tag}-linux-x86_64.tar.xz"
   # Branding icons, taken from the integration repo at the matching tag.
-  "librewolf-hellfire-src::git+https://codeberg.org/FailsafeDX/librewolf-hellfire.git#tag=${_tag}"
+  "librewolf-hellfire-src::git+https://codeberg.org/FailsafeDX/librewolf-hellfire.git"
   "librewolf-hellfire.desktop"
 )
 # Run `updpkgsums` to fill in the tarball checksum for each release.
@@ -102,8 +102,4 @@ END
 
   # https://bugzilla.mozilla.org/show_bug.cgi?id=658850
   ln -srfv "${pkgdir}/usr/bin/${_appname}" "${pkgdir}/usr/lib/${_appname}/${_appname}-bin"
-
-  # Use the system CA store.
-  local nssckbi="${pkgdir}/usr/lib/${_appname}/libnssckbi.so"
-  [[ -e ${nssckbi} ]] && ln -srfv "${pkgdir}/usr/lib/libnssckbi.so" "${nssckbi}"
 }
