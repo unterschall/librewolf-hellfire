@@ -39,9 +39,12 @@ export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/aur -o IdentitiesOnly=yes"
 git config --global user.name "${GIT_AUTHOR_NAME:-LibreWolf HellFire CI}"
 git config --global user.email "${GIT_AUTHOR_EMAIL:-ci@example.invalid}"
 
-# Clone the live AUR package so we update exactly what's published.
-git clone "ssh://aur@aur.archlinux.org/${PKG}.git" aur
-cd aur
+# Clone the live AUR package so we update exactly what's published. Use a path
+# outside the repo, since the repo itself already contains an aur/ directory.
+CLONE="$HOME/aur-pkg"
+rm -rf "$CLONE"
+git clone "ssh://aur@aur.archlinux.org/${PKG}.git" "$CLONE"
+cd "$CLONE"
 
 # Bring in the maintained packaging files from this repo's copy.
 cp -f "${WORK}/aur/${PKG}/PKGBUILD" PKGBUILD
