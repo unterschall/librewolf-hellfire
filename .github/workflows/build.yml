@@ -160,7 +160,7 @@ jobs:
         run: |
           if [ -n "$AUR_SSH_PRIVATE_KEY" ]; then echo "have=true" >> "$GITHUB_OUTPUT"
           else echo "have=false (set AUR_SSH_PRIVATE_KEY to enable)"; echo "have=false" >> "$GITHUB_OUTPUT"; fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         if: steps.haskey.outputs.have == 'true'
       - name: Update and push AUR package
         if: steps.haskey.outputs.have == 'true'
