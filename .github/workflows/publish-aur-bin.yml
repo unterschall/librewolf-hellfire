@@ -1,0 +1,62 @@
+name: Publish AUR (librewolf-hellfire-bin)
+
+# Manual / on-demand publisher for the -bin package against an existing GitHub
+# Release (no rebuild). The automatic post-build publish still lives in
+# build.yml; this workflow is for publishing or re-publishing a release that has
+# already been built — e.g. the first AUR submission, or after the AUR secret
+# was added later.
+#
+# Gated on the AUR_SSH_PRIVATE_KEY secret; a no-op if that secret is unset.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish, e.g. 152.0.2-1. Leave blank to use the latest release."
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  publish-aur-bin:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Gate on AUR secret
+        id: haskey
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          if [ -n "$AUR_SSH_PRIVATE_KEY" ]; then echo "have=true" >> "$GITHUB_OUTPUT"
+          else echo "have=false (set AUR_SSH_PRIVATE_KEY to enable)"; echo "have=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Resolve release tag
+        if: steps.haskey.outputs.have == 'true'
+        id: tag
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag="$INPUT_TAG"
+          if [ -z "$tag" ]; then
+            tag=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
+              "https://api.github.com/repos/${REPO}/releases/latest" \
+              | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)
+          fi
+          [ -n "$tag" ] || { echo "::error::could not resolve a release tag"; exit 1; }
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Publishing -bin for tag: $tag"
+
+      - uses: actions/checkout@v5
+        if: steps.haskey.outputs.have == 'true'
+
+      - name: Update and push AUR package
+        if: steps.haskey.outputs.have == 'true'
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: ./scripts/update-aur-bin.sh
