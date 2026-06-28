@@ -26,7 +26,9 @@ if [ "$(id -u)" -eq 0 ]; then
   install -d -o builder -g builder /home/builder/work
   cp -rT "$PWD" /home/builder/work/repo
   chown -R builder:builder /home/builder/work
-  exec sudo -u builder -E bash "$0"
+  # Preserve env (AUR_SSH_PRIVATE_KEY) but force HOME to builder's own, writable
+  # home — GitHub sets HOME=/github/home, which builder cannot write.
+  exec sudo -u builder -E env HOME=/home/builder bash "$0"
 fi
 
 # --- running as unprivileged user from here ---
@@ -63,4 +65,6 @@ if git diff --cached --quiet; then
   exit 0
 fi
 git commit -m "Update packaging (${SRC_SHA})"
-git push origin master
+# HEAD:master works whether the fresh clone's branch is master or main
+# (matters for the first push that creates the package base).
+git push origin HEAD:master
