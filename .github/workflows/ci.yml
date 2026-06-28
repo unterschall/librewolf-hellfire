@@ -40,7 +40,21 @@ jobs:
       - name: Version/tag derivation + portable -march rewrite
         run: |
           set -euo pipefail
-          git clone --depth 1 "$UPSTREAM_REPO" lwhf
+          # Retry the upstream clone to ride out transient Codeberg outages. If
+          # it stays unreachable, warn and skip the upstream-dependent checks —
+          # an upstream blip is not a defect in this change, and the offline
+          # checks (and the srcinfo job) still gate the build.
+          ok=0
+          for attempt in 1 2 3; do
+            if git clone --depth 1 "$UPSTREAM_REPO" lwhf; then ok=1; break; fi
+            echo "clone attempt $attempt failed; retrying in $((attempt * 5))s..."
+            rm -rf lwhf
+            sleep $((attempt * 5))
+          done
+          if [ "$ok" -ne 1 ]; then
+            echo "::warning::upstream $UPSTREAM_REPO unreachable after 3 attempts; skipping upstream-dependent checks"
+            exit 0
+          fi
           cd lwhf
           ver=$(cat version); rel=$(cat release); tag="${ver}-${rel}"
           echo "Detected upstream: version=$ver release=$rel tag=$tag"
